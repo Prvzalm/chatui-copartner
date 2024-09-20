@@ -208,7 +208,7 @@ const LoginPopup = ({ onClose }) => {
   return (
     <>
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 w-screen h-screen">
-        <div className="bg-white border border-gray-300 p-8 rounded-xl w-96 relative shadow-lg">
+        <div className="bg-white border-2 border-dashed border-black p-8 rounded-xl w-96 relative shadow-lg">
           {/* <div className="absolute top-3 right-3">
             <button
               onClick={onClose}
