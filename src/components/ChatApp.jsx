@@ -533,6 +533,16 @@ const ChatApp = () => {
             [user]: [...(prevConversations[user] || []), { sender: user, text: message, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }],
           }));
       
+          // Find the contact name based on the user's email (or identifier)
+          const expertContact = contacts.find(contact => contact.email === user); // Adjust 'user' if needed
+      
+          // If expert name is found, show it in the toast
+          if (expertContact) {
+            toast.info(`New message from ${expertContact.name}`);  // Use the expert's name in the toast
+          } else {
+            toast.info(`New message from ${expertContact.name}`);  // Fallback to using email or ID if no expert is found
+          }
+      
           // **Update timer and timespan immediately when receiving the message**
           if (expertId === currentExpertId) {
             const timespan = {

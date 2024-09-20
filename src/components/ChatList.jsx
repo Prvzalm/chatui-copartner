@@ -7,16 +7,13 @@ import { motion } from "framer-motion";
 
 const ContactItem = ({
   contact,
-  unreadCount,
+  unreadCount, // The unread message count passed from ChatList
   onSelectContact,
-  getExpertType,
-  activeTab,
   premiumPrice,
-  hasUsedPlanD,
-  hasGlobalUsedPlanD // Add global Plan D check
+  hasGlobalUsedPlanD
 }) => {
   const contactImage =
-    activeTab === "Chats" ? contact.img : contact.expertImagePath;
+    contact.img || contact.expertImagePath; // Use either contact image or expert image path
 
   return (
     <div
@@ -44,7 +41,6 @@ const ContactItem = ({
               </p>
               <div className="flex gap-2 ml-3">
                 {premiumPrice ? (
-                  // Conditionally hide "Free" if planType "D" is used globally
                   hasGlobalUsedPlanD ? (
                     <p className="text-[17px] font-bold">₹{premiumPrice}/min</p>
                   ) : (
@@ -58,14 +54,9 @@ const ContactItem = ({
                     </>
                   )
                 ) : (
-                  <>
-                    <p className="text-[17px] font-bold line-through">₹Loading/min</p>
-                    {!hasGlobalUsedPlanD && (
-                      <span className="text-gradient-2 font-bold text-[17px]">
-                        FREE
-                      </span>
-                    )}
-                  </>
+                  <span className="text-gradient-2 font-bold text-[17px]">
+                    FREE
+                  </span>
                 )}
               </div>
             </div>
@@ -77,6 +68,8 @@ const ContactItem = ({
                 <img src={chatIcon} alt="" className="w-6 mr-3" />
                 Chat
               </button>
+
+              {/* Display unread message count if greater than 0 */}
               {unreadCount > 0 && (
                 <div className="absolute top-0 right-0 mt-2 mr-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
                   {unreadCount}
@@ -89,6 +82,7 @@ const ContactItem = ({
     </div>
   );
 };
+
 
 const ChatList = ({
   contacts,
@@ -384,15 +378,15 @@ const ChatList = ({
               </div>
             ) : (
               <div className="overflow-y-auto h-[calc(100vh-200px)] md:h-[calc(100vh-150px)] bg-transparent">
-                {filteredContacts.map((contact, index) => {
-                  const lastMessage =
-                    conversations[contact.name]?.slice(-1)[0] || {};
-                  const truncatedMessage = truncateMessage(
-                    lastMessage.sender === "You"
-                      ? `You: ${lastMessage.text}`
-                      : lastMessage.text
-                  );
-                  const unreadCount = unreadMessages[contact.email] || 0;
+               {filteredContacts.map((contact, index) => {
+  const lastMessage = conversations[contact.name]?.slice(-1)[0] || {};
+  const truncatedMessage = truncateMessage(
+    lastMessage.sender === "You"
+      ? `You: ${lastMessage.text}`
+      : lastMessage.text
+  );
+
+  const unreadCount = unreadMessages[contact.expertsId] || 0; // Get unread message count for this contact
 
                   return (
                     <ContactItem
