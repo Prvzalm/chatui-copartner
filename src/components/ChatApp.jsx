@@ -642,14 +642,14 @@ const ChatApp = () => {
   useEffect(() => {
     let intervalId;
     let startTime = Date.now();
-
+  
     const checkAndRefresh = () => {
       if (expertsData[currentExpertId]?.timer > 0) {
         const elapsedTime = (Date.now() - startTime) / 1000;
         const newTimer = expertsData[currentExpertId].timer - elapsedTime;
-
+  
         if (newTimer <= 0) {
-          handleExpiredTimer(currentExpertId);
+          handleExpiredTimer(currentExpertId); // Expired timer handling
         } else {
           setExpertsData((prevData) => ({
             ...prevData,
@@ -662,19 +662,18 @@ const ChatApp = () => {
         }
       }
     };
-
-    intervalId = setInterval(checkAndRefresh, 1000);
-
+  
+    // Handle tab visibility change
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        if (expertsData[currentExpertId]?.timer <= 0) {
-          handleExpiredTimer(currentExpertId);
-        } else {
-          checkAndRefresh();
+        // When tab becomes visible, just refresh the timer if it hasn't expired
+        if (expertsData[currentExpertId]?.timer > 0) {
+          checkAndRefresh(); // Simply continue the timer without resetting or reloading
         }
       }
     };
 
+    intervalId = setInterval(checkAndRefresh, 1000);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
