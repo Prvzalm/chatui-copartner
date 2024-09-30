@@ -52,38 +52,49 @@ const ChatApp = () => {
     sessionStorage.getItem(`firstReplyReceived_${currentExpertId}`) === "true"
   );
 
-  const checkPaymentStatus = (transactionId) => {
-    fetch(
-      `https://copartners.in:5137/api/ChatConfiguration/GetChatSubscribe/${transactionId}`
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.isSuccess) {
-          const { chatPlanId } = data.data;
-          setPaidPlanChatId(chatPlanId);
-
-          // Store the paid chatPlanId in sessionStorage
-          sessionStorage.setItem(`paidChatPlan_${chatPlanId}`, "true");
-
-          // Close popups after successful payment
-          setShowPremiumPlanPopup(false);
-          setShowSubscriptionPopup(false);
-        } else {
-          console.error("Payment status check failed:", data.errorMessages);
+  const checkPaymentStatus = async (transactionId) => {
+    try {
+      const response = await fetch(
+        `https://copartners.in:5137/api/ChatConfiguration/GetChatSubscribe/${transactionId}`
+      );
+      const data = await response.json();
+  
+      if (data.isSuccess) {
+        const { chatPlanId } = data.data;
+        setPaidPlanChatId(chatPlanId);
+  
+        // Store the paid chatPlanId in sessionStorage
+        sessionStorage.setItem(`paidChatPlan_${chatPlanId}`, "true");
+  
+        // Close popups after successful payment
+        setShowPremiumPlanPopup(false);
+        setShowSubscriptionPopup(false);
+  
+        // **Reconnect SignalR after successful payment**
+        if (selectedContact && selectedContact.email) {
+          console.log("Reconnecting SignalR after successful payment...");
+          await startConnection(username, selectedContact.email);
         }
-      })
-      .catch((error) => {
-        console.error("Error fetching payment status:", error);
-      });
+      } else {
+        console.error("Payment status check failed:", data.errorMessages);
+      }
+    } catch (error) {
+      console.error("Error fetching payment status:", error);
+    }
   };
-
-  // Check payment status on page load
+  
   useEffect(() => {
     const transactionId = sessionStorage.getItem("transactionId");
     if (transactionId) {
       checkPaymentStatus(transactionId); // Check payment status with stored transaction ID
     }
-  }, []);
+  
+    if (selectedContact && selectedContact.email) {
+      // Restart connection for the current expert after page reload or payment
+      startConnection(username, selectedContact.email);
+    }
+  }, [selectedContact, username]);
+  
 
   const handleOpenPaymentPopup = (plan) => {
     console.log(plan);
