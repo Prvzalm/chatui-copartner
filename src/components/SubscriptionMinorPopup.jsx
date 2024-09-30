@@ -6,10 +6,12 @@ const SubscriptionMinorPopup = ({
   selectedPlan,
   userId,
   expertName,
-  chatId,
   mobileNumber,
   onBackToChatList,
-  setShowSubscriptionPopup
+  setShowSubscriptionPopup,
+  setExpertsData,   // Accept setExpertsData as a prop
+  currentExpertId,  // Accept currentExpertId as a prop
+  handleSendMessage // Accept handleSendMessage as a prop
 }) => {
   const [loading, setLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -40,17 +42,17 @@ const SubscriptionMinorPopup = ({
       return;
     }
 
-    // SubscriberCreateDto object using dynamic props
+    // Create chatSubscriberCreateDto object
     const chatSubscriberCreateDto = {
-      chatPlanId: selectedPlan.id, // From selectedPlan
-      userId: userId, // From props
-      gstAmount: selectedPlan.price * 0.18, // GST calculated from selectedPlan
-      totalAmount: selectedPlan.price, // Total price from selectedPlan
-      discountPercentage: selectedPlan.discountPercentage || 0, // If available, else 0
-      paymentMode: "UPI", // Static for now
-      transactionId: `T${Date.now()}`, // Simulated transaction ID
-      transactionDate: new Date().toISOString(), // Current timestamp
-      isActive: true, // Assuming it's active by default
+      chatPlanId: selectedPlan.id, 
+      userId: userId, 
+      gstAmount: selectedPlan.price * 0.18,
+      totalAmount: selectedPlan.price, 
+      discountPercentage: selectedPlan.discountPercentage || 0, 
+      paymentMode: "UPI",
+      transactionId: `T${Date.now()}`, 
+      transactionDate: new Date().toISOString(), 
+      isActive: true, 
       invoiceId :"",
       paymentId: "",
       isWebhookProcessed: false,
@@ -67,75 +69,61 @@ const SubscriptionMinorPopup = ({
         body: JSON.stringify(chatSubscriberCreateDto),
       }
     )
-      .then((response) => {
-        if (!response.ok) {
-          return response.text().then((text) => {
-            console.error(`Network response was not ok: ${text}`);
-            throw new Error(`Network response was not ok: ${text}`);
-          });
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.error) {
-          alert(`Error: ${data.error}`);
-          return;
-        }
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.error) {
+        alert(`Error: ${data.error}`);
+        return;
+      }
 
-        // Razorpay options using dynamic props
-        const options = {
-          key: "rzp_live_D2N1nZHECBBkuW",
-          amount: data.amountInPaise, // Amount in paise from API
-          currency: "INR",
-          name: expertName, // Expert name from props
-          description: `Chat`, // Dynamic plan name
-          order_id: data.orderId, // Razorpay order ID from API
-          handler: function (response) {
-            console.log("Payment response:", response);
-            capturePayment(response.razorpay_payment_id, data.orderId);
-            console.log(chatSubscriberCreateDto.transactionId);
-            sessionStorage.setItem("transactionId", chatSubscriberCreateDto.transactionId);
-          },
-          prefill: {
-            name: "John Doe", // You can make this dynamic if you want
-            email: "john.doe@example.com", // Can be dynamic as well
-            contact: mobileNumber, // Prefill mobile number dynamically
-          },
-        };
+      const options = {
+        key: "rzp_live_D2N1nZHECBBkuW",
+        amount: data.amountInPaise, 
+        currency: "INR",
+        name: expertName, 
+        description: `Chat`,
+        order_id: data.orderId, 
+        handler: function (response) {
+          console.log("Payment response:", response);
+          capturePayment(response.razorpay_payment_id, data.orderId);
+        },
+        prefill: {
+          name: "John Doe", 
+          email: "john.doe@example.com", 
+          contact: mobileNumber,
+        },
+      };
 
-        const rzp1 = new window.Razorpay(options);
-        rzp1.open();
-      })
-      .catch((error) => {
-        console.error("Error creating order:", error);
-        alert("Order creation failed");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      const rzp1 = new window.Razorpay(options);
+      rzp1.open();
+    })
+    .catch((error) => {
+      console.error("Error creating order:", error);
+      alert("Order creation failed");
+    })
+    .finally(() => {
+      setLoading(false);
+    });
   };
 
   const capturePayment = (paymentId, orderId) => {
-    const amount = selectedPlan.price; // Dynamic total amount
+    const amount = selectedPlan.price;
 
     const subscriberCreateDto = {
-      chatPlanId: selectedPlan.id, // Dynamic subscription ID
-      userId: userId, // Dynamic user ID
-      gstAmount: selectedPlan.price * 0.18, // Dynamic GST amount
-      totalAmount: amount, // Dynamic total amount
-      discountPercentage: selectedPlan.discountPercentage || 0, // Dynamic discount
-      paymentMode: "UPI", // Static for now
-      transactionId: `T${Date.now()}`, // Razorpay payment ID
-      transactionDate: new Date().toISOString(), // Current timestamp
-      isActive: true, // Assuming it's active by default
+      chatPlanId: selectedPlan.id,
+      userId: userId,
+      gstAmount: selectedPlan.price * 0.18, 
+      totalAmount: amount,
+      discountPercentage: selectedPlan.discountPercentage || 0, 
+      paymentMode: "UPI",
+      transactionId: `T${Date.now()}`,
+      transactionDate: new Date().toISOString(), 
+      isActive: true,
       invoiceId :"",
       paymentId: paymentId,
       isWebhookProcessed: false,
     };
 
-    console.log(subscriberCreateDto);
-
-    // Fetch to capture payment
     fetch(
       `https://copartners.in:5137/api/PaymentGateway/capture-payment?paymentId=${paymentId}&amount=${amount}&orderId=${orderId}`,
       {
@@ -146,26 +134,34 @@ const SubscriptionMinorPopup = ({
         body: JSON.stringify(subscriberCreateDto),
       }
     )
-      .then((response) => {
-        if (!response.ok) {
-          return response.text().then((text) => {
-            console.error(`Network response was not ok: ${text}`);
-            throw new Error(`Network response was not ok: ${text}`);
-          });
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          window.location.reload(); // Redirect to success page if required
-        } else {
-          alert(`Error: ${data.message}`);
-        }
-      })
-      .catch((error) => {
-        console.error("Error capturing payment:", error);
-        alert("Payment capture failed");
-      });
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        // **Update planType, planId, and paidPlanId only after successful payment**
+        setExpertsData((prevData) => ({
+          ...prevData,
+          [currentExpertId]: {
+            ...prevData[currentExpertId],
+            planType: 'P', // Change as per selected plan
+            planId: selectedPlan.id,
+            paidPlanId: paymentId,
+          }
+        }));
+
+        // **Send automatic message to the expert**
+        handleSendMessage({
+          text: "User has bought your plan",
+        });
+
+        window.location.reload(); // Redirect to success page if required
+      } else {
+        alert(`Error: ${data.message}`);
+      }
+    })
+    .catch((error) => {
+      console.error("Error capturing payment:", error);
+      alert("Payment capture failed");
+    });
   };
 
   const handleClosePopups = () => {

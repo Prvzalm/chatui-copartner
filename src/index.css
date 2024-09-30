@@ -10,6 +10,10 @@
   height: 100vh;
 }
 
+.backgroundChat{
+  background-image: url(./assets/bgChat.svg);
+}
+
 .chat-sidebar {
   width: 30%;
   background: #f4f4f4;

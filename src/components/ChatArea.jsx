@@ -7,6 +7,8 @@ import { TbMessage2Share } from "react-icons/tb";
 import { MdOutlineHistory } from "react-icons/md";
 import FreePlanPopup from './FreePlanPopup';
 import PremiumPlanPopup from './PremiumPlanPopup';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const ChatArea = ({ username, userImage, selectedContact, messages, onSendMessage, onBack, loading, expertId, connectionStatus, startEndTime, onShowPlanDetails, timer, showFreePlanPopup, showPremiumPlanPopup, freePlanDuration, premiumPlans, handleSelectPlan, closePlanPopups }) => {
   const [newMessage, setNewMessage] = useState('');
@@ -15,9 +17,39 @@ const ChatArea = ({ username, userImage, selectedContact, messages, onSendMessag
   const [firstTimeMessage, setFirstTimeMessage] = useState(null); // First-time message from the expert
   const [isFirstMessageSent, setIsFirstMessageSent] = useState(false); // Track if user sent the first message
   const [sequenceMessages, setSequenceMessages] = useState([]); // Store sequence messages
+  const [disableSendButton, setDisableSendButton] = useState(false); // Add disable state for send button
   const messagesEndRef = useRef(null);
   const minutes = Math.floor(timer / 60);
   const seconds = timer % 60;
+
+  useEffect(() => {
+    // Fetch if planType "D" exists with status "Pending" and disable the send button if true
+    const checkPendingPlanTypeD = async () => {
+      try {
+        const response = await axios.get(`https://copartners.in:5137/api/ChatConfiguration/GetChatAvailUser/${sessionStorage.getItem('userId')}`);
+        if (response.data.isSuccess) {
+          const pendingPlanD = response.data.data.find(plan => plan.planType === "D" && plan.status === "Pending");
+          if (pendingPlanD) {
+            setDisableSendButton(true); // Disable send button if there's already a pending planType "D"
+            // toast.info("You have already sent planType 'D' to an expert", {
+            //   position: "top-right",
+            //   autoClose: 5000,
+            //   hideProgressBar: false,
+            //   closeOnClick: true,
+            //   pauseOnHover: true,
+            //   draggable: true,
+            // });
+          } else {
+            setDisableSendButton(false); // Enable send button if no pending planType "D" is found
+          }
+        }
+      } catch (error) {
+        console.error("Error checking PlanType D:", error);
+      }
+    };
+
+    checkPendingPlanTypeD();
+  }, [expertId]);
 
   const sendMessage = () => {
     if (newMessage.trim() || selectedFile) {
@@ -113,14 +145,14 @@ const ChatArea = ({ username, userImage, selectedContact, messages, onSendMessag
 
   return (
     <motion.div
-      className="flex flex-col relative"
+      className="flex flex-col relative "
       style={{ height: chatAreaHeight, backgroundColor: '#fff' }}
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="p-4 bg-transparent rounded-lg flex items-center justify-between">
+      <div className="p-4 bg-transparent rounded-lg flex items-center justify-between ">
         <div className="flex items-center">
           <button className="md:hidden p-2 mr-4 bg-gray-100 rounded-full" onClick={onBack}>
             <img src={back} alt="Back" className="md:w-10 w-8" />
@@ -168,7 +200,7 @@ const ChatArea = ({ username, userImage, selectedContact, messages, onSendMessag
         </button>
       </div>
 
-      <div className="flex-grow p-4 overflow-y-auto bg-[#f4f4f4] rounded-t-[30px]">
+      <div className="flex-grow p-4 overflow-y-auto bg-[#f4f4f4] rounded-t-[30px] backgroundChat">
         {loading ? (
           <div className="flex flex-col justify-center items-center h-full">
             <img src={loadingGif} alt="Loading..." className="w-20 h-20" />
@@ -279,10 +311,6 @@ const ChatArea = ({ username, userImage, selectedContact, messages, onSendMessag
         </div>
       )}
       <div className="p-4 border-t border-gray-300 flex bg-[#a7d6f78a] items-center gap-2">
-        {/* <label className="ml-2 p-2 text-[22px] text-black rounded cursor-pointer">
-          <input type="file" className="hidden" onChange={handleFileUpload} />
-          <IoMdAttach />
-        </label> */}
         <input
           type="text"
           className="flex-grow p-2 bg-transparent text-black placeholder-gray-500"
@@ -290,10 +318,12 @@ const ChatArea = ({ username, userImage, selectedContact, messages, onSendMessag
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          disabled={disableSendButton} // Disable the input field if planType D is pending
         />
         <button
           className="p-2 bg-gradient-to-r from-[#0081F1] to-[#45C4D5] text-white rounded-full"
           onClick={sendMessage}
+          disabled={disableSendButton} // Disable the send button if planType D is pending
         >
           <TbMessage2Share className='text-[22px]' />
         </button>
