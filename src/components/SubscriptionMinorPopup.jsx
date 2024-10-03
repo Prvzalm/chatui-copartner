@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { IoCloseCircleOutline } from "react-icons/io5";
+import LoadingScreen from "./LoadingScreen";
 
 const SubscriptionMinorPopup = ({
   onClose,
@@ -106,38 +107,41 @@ const SubscriptionMinorPopup = ({
     });
   };
 
-  const capturePayment = (paymentId, orderId) => {
+  const capturePayment = async (paymentId, orderId) => {
     const amount = selectedPlan.price;
-
+  
     const subscriberCreateDto = {
       chatPlanId: selectedPlan.id,
       userId: userId,
-      gstAmount: selectedPlan.price * 0.18, 
+      gstAmount: selectedPlan.price * 0.18,
       totalAmount: amount,
-      discountPercentage: selectedPlan.discountPercentage || 0, 
+      discountPercentage: selectedPlan.discountPercentage || 0,
       paymentMode: "UPI",
       transactionId: `T${Date.now()}`,
-      transactionDate: new Date().toISOString(), 
+      transactionDate: new Date().toISOString(),
       isActive: true,
-      invoiceId :"",
+      invoiceId: "",
       paymentId: paymentId,
       isWebhookProcessed: false,
     };
-
-    fetch(
-      `https://copartners.in:5137/api/PaymentGateway/capture-payment?paymentId=${paymentId}&amount=${amount}&orderId=${orderId}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(subscriberCreateDto),
-      }
-    )
-    .then((response) => response.json())
-    .then((data) => {
+  
+    setRedirecting(true);
+  
+    try {
+      const response = await fetch(
+        `https://copartners.in:5137/api/PaymentGateway/capture-payment?paymentId=${paymentId}&amount=${amount}&orderId=${orderId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(subscriberCreateDto),
+        }
+      );
+  
+      const data = await response.json();
+  
       if (data.success) {
-        // **Update planType, planId, and paidPlanId only after successful payment**
         setExpertsData((prevData) => ({
           ...prevData,
           [currentExpertId]: {
@@ -145,24 +149,24 @@ const SubscriptionMinorPopup = ({
             planType: 'P', // Change as per selected plan
             planId: selectedPlan.id,
             paidPlanId: paymentId,
-          }
+          },
         }));
 
-        // **Send automatic message to the expert**
-        handleSendMessage({
+        await handleSendMessage({
           text: "User has bought your plan",
         });
-
+  
         window.location.reload(); // Redirect to success page if required
       } else {
         alert(`Error: ${data.message}`);
       }
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error("Error capturing payment:", error);
       alert("Payment capture failed");
-    });
-  };
+    } finally {
+      setRedirecting(false);
+    }
+  };  
 
   const handleClosePopups = () => {
     setShowSubscriptionPopup(false);
@@ -171,6 +175,7 @@ const SubscriptionMinorPopup = ({
 
   return (
     <>
+    {redirecting && <LoadingScreen />}{" "}
       <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-40">
         <div className="bg-white border-2 border-dashed border-black rounded-xl shadow-md md:w-[380px] w-[90%] relative">
           <div className="p-6">
